@@ -4,13 +4,44 @@ from openpyxl import load_workbook
 from docx2pdf import convert
 
 def substituir_placeholder(doc, chave, valor):
+    for par in doc.paragraphs:
+        texto_completo = ''.join(run.text for run in par.runs)
+        if chave not in texto_completo:
+            continue
+
+        novo_texto = texto_completo.replace(chave, valor)
+
+        # Guardar os estilos originais
+        estilos = []
+        for run in par.runs:
+            estilos.append({
+                'bold': run.bold,
+                'italic': run.italic,
+                'underline': run.underline,
+                'font_name': run.font.name,
+                'font_size': run.font.size
+            })
+
+        # Limpar os runs antigos
+        for run in par.runs:
+            run.clear()
+        par._element.clear_content()
+
+        # Adicionar novo run com texto completo e aplicar estilo do primeiro run original
+        novo_run = par.add_run(novo_texto)
+        if estilos:
+            estilo_base = estilos[0]
+            novo_run.bold = estilo_base['bold']
+            novo_run.italic = estilo_base['italic']
+            novo_run.underline = estilo_base['underline']
+            novo_run.font.name = estilo_base['font_name']
+            novo_run.font.size = estilo_base['font_size']
+
+def substituir_placeholder_mantem_formatacao_mas_nem_sempre_substitui(doc, chave, valor):
     for paragrafo in doc.paragraphs:
-        texto_completo = ''.join(run.text for run in paragrafo.runs)
-        if chave in texto_completo:
-            novo_texto = texto_completo.replace(chave, valor)
-            for i in range(len(paragrafo.runs)-1, -1, -1):
-                paragrafo._element.remove(paragrafo.runs[i]._element)
-            paragrafo.add_run(novo_texto)
+        for run in paragrafo.runs:
+            if chave in run.text:
+                run.text = run.text.replace(chave, valor)
 
 def retirar_espacos_em_branco(s):
     return s.replace(" ", "")
